@@ -33,11 +33,21 @@ public class LeetCodeSync {
             for (JsonNode sub : submissions) {
                 String subId = sub.get("id").asText();
                 String titleSlug = sub.get("titleSlug").asText();
+                System.out.println("\nChecking: " + titleSlug);
 
                 JsonNode details = getSubmissionDetails(subId);
-                if (details != null && "Accepted".equals(details.path("status_display").asText())) {
-                    String code = details.get("code").asText();
-                    String lang = details.get("runtime_lang").asText();
+                
+                if (details == null) {
+                    System.out.println(" -> FAILED: Could not extract pageData JSON from LeetCode HTML.");
+                    continue; // Skip to the next problem
+                }
+
+                String status = details.path("status_display").asText();
+                System.out.println(" -> Status found: " + status);
+
+                if ("Accepted".equals(status)) {
+                    String code = details.path("code").asText();
+                    String lang = details.path("runtime_lang").asText();
 
                     String ext = lang.contains("java") ? "java" : "txt";
                     Path filePath = Paths.get("Daily-Practice", titleSlug + "." + ext);
@@ -45,7 +55,9 @@ public class LeetCodeSync {
                     if (!Files.exists(filePath)) {
                         Files.createDirectories(filePath.getParent());
                         Files.writeString(filePath, code);
-                        System.out.println("Synced: " + titleSlug);
+                        System.out.println(" -> SUCCESS: Synced " + titleSlug);
+                    } else {
+                        System.out.println(" -> SKIPPED: File already exists.");
                     }
                 }
             }
