@@ -36,20 +36,20 @@ public class LeetCodeSync {
                 System.out.println("\nChecking: " + titleSlug);
 
                 JsonNode details = getSubmissionDetails(subId);
-                
-                if (details == null) {
-                    System.out.println(" -> FAILED: Could not extract pageData JSON from LeetCode HTML.");
-                    continue; // Skip to the next problem
+
+                if (details == null || details.isMissingNode() || details.isNull()) {
+                    System.out.println(" -> FAILED: Could not fetch details from GraphQL API.");
+                    continue;
                 }
 
-                String status = details.path("status_display").asText();
+                String status = details.path("statusDisplay").asText();
                 System.out.println(" -> Status found: " + status);
 
                 if ("Accepted".equals(status)) {
                     String code = details.path("code").asText();
-                    String lang = details.path("runtime_lang").asText();
+                    String lang = details.path("lang").path("name").asText();
 
-                    String ext = lang.contains("java") ? "java" : "txt";
+                    String ext = lang.toLowerCase().contains("java") ? "java" : "txt";
                     Path filePath = Paths.get("Daily-Practice", titleSlug + "." + ext);
 
                     if (!Files.exists(filePath)) {
@@ -111,22 +111,25 @@ public class LeetCodeSync {
     }
 
     private static JsonNode getSubmissionDetails(String submissionId) throws Exception {
-        String url = "https://leetcode.com/submissions/detail/" + submissionId + "/";
-        HttpRequest request = getBaseRequestBuilder(url).GET().build();
+        // Use LeetCode's official GraphQL query for submission details
+        String query = "query submissionDetails($submissionId: Int!) { " +
+                "submissionDetails(submissionId: $submissionId) { " +
+                "code statusDisplay lang { name } } }";
+
+        ObjectNode payload = mapper.createObjectNode();
+        payload.put("query", query);
+
+        ObjectNode variables = mapper.createObjectNode();
+        variables.put("submissionId", Integer.parseInt(submissionId));
+        payload.set("variables", variables);
+
+        HttpRequest request = getBaseRequestBuilder("https://leetcode.com/graphql")
+                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(payload)))
+                .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        String body = response.body();
+        JsonNode root = mapper.readTree(response.body());
 
-        // LeetCode embeds submission data inside a window element in the page source
-        for (String line : body.split("\n")) {
-            if (line.contains("pageData = ")) {
-                String jsonStr = line.split("pageData = ")[1].trim();
-                if (jsonStr.endsWith(";")) {
-                    jsonStr = jsonStr.substring(0, jsonStr.length() - 1);
-                }
-                return mapper.readTree(jsonStr);
-            }
-        }
-        return null;
+        return root.path("data").path("submissionDetails");
     }
 }
