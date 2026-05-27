@@ -26,7 +26,9 @@ public class LeetCodeSync {
 
         try {
             String username = getUsername();
+            System.out.println("Successfully authenticated as: " + username);
             JsonNode submissions = getRecentSubmissions(username, 10);
+            System.out.println("Found " + submissions.size() + " recent submissions.");
 
             for (JsonNode sub : submissions) {
                 String subId = sub.get("id").asText();
