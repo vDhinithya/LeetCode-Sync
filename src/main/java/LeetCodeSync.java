@@ -64,6 +64,7 @@ public class LeetCodeSync {
         } catch (Exception e) {
             System.err.println("An error occurred during sync: " + e.getMessage());
             e.printStackTrace();
+            System.exit(1);
         }
     }
 
@@ -120,7 +121,8 @@ public class LeetCodeSync {
         payload.put("query", query);
 
         ObjectNode variables = mapper.createObjectNode();
-        variables.put("submissionId", Integer.parseInt(submissionId));
+//        variables.put("submissionId", Integer.parseInt(submissionId));
+        variables.put("submissionId", Long.parseLong(submissionId));
         payload.set("variables", variables);
 
         HttpRequest request = getBaseRequestBuilder("https://leetcode.com/graphql")
